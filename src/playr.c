@@ -7,7 +7,7 @@
 
 #include "binarylog.h"
 
-#define DEBUG
+//#define DEBUG
 
 struct timespec *get_offset(time_t basetime, time_t offsettime,
 			    int offsetms);
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     char *substr = 0;
     size_t filesize = 100;
     pid_t pid = 0;
-    int ret;
+    int ret = 0;
     DIR *dir = 0;
     FILE *configfile = 0;
     struct dirent *nextfile = 0;
@@ -75,13 +75,15 @@ int main(int argc, char **argv)
 		ret =
 		    replay_log(substr,
 			       "");
-		return ret;
+		goto complete;
 	    }
 	}
 	substr = 0;
     }
+complete:
+    free(file);
     closedir(dir);
-    return 0;
+    return ret;
 }
 
 int replay_log(const char *file, const char *connstring)
@@ -101,6 +103,16 @@ int replay_log(const char *file, const char *connstring)
     char *filename = 0;
     size_t filenamelength = 0;
     size_t itemsread = 0;
+    char *prepline = 0;
+    size_t preplinesize = 100;
+    char *lineiter = 0;
+    size_t dsize = 0;
+    char** params = 0;
+    size_t paramcount = 0;
+    size_t paramsize = 0;
+    int i = 0;
+    
+    prepline = (char*)malloc(sizeof(char)*preplinesize);
 
     line = (char *) malloc(sizeof(char) * linesize);
     if (line == 0) {
@@ -154,7 +166,7 @@ int replay_log(const char *file, const char *connstring)
 	fread(line, sizeof(char), log.length, fin);
 	line[log.length] = '\0';
 #ifdef DEBUG
-	printf("%s\n", line);
+	printf("%d: %s\n", log.type, line);
 #endif				//DEBUG
 
 	// base offset = logtime - basetime
@@ -176,8 +188,48 @@ int replay_log(const char *file, const char *connstring)
 	}
 	free(baseoffset);
 	free(currentoffset);
-
-	result = PQexec(conn, line);
+	if(log.type==PLAYR_NORMAL_STATEMENT) {
+		result = PQexec(conn, line);
+	} else if(log.type==PLAYR_PREPARED_STATEMENT_PARSE) {
+		if(preplinesize<strlen(line)+1) {
+			prepline=(char*)realloc(prepline, strlen(line)+1);
+			preplinesize = strlen(line)+1;
+		}
+		strcpy(prepline, line);
+	} else if(log.type==PLAYR_PREPARED_STATEMENT_DETAIL) {
+		for(i=0; i<paramcount; i++) {
+			free(*(params+i));
+		}
+		paramcount = 0;
+		lineiter = line;
+		memcpy(&dsize, lineiter, sizeof(size_t));
+		while(dsize != 0) {
+#ifdef DEBUG
+			printf("dsize: %d\n", dsize);
+			fflush(0);
+#endif // DEBUG
+			lineiter += sizeof(size_t);
+			paramcount+=1;
+			if(paramsize < paramcount) {
+				params = (char**)realloc(params, paramsize+10);
+				paramsize += 10;
+			}
+			params[paramcount-1] = (char*)malloc(dsize);
+			memcpy(*(params+paramcount-1), lineiter, dsize);
+			lineiter = lineiter + dsize;
+#ifdef DEBUG	
+			printf("param: %s\n", params[paramcount-1]);
+			fflush(0);
+#endif // DEBUG
+			memcpy(&dsize, lineiter, sizeof(size_t));
+		}
+	} else if(log.type==PLAYR_PREPARED_STATEMENT_EXECUTE) {
+#ifdef DEBUG
+		printf("executing %s\n", prepline);
+#endif // DEBUG
+		result = PQexecParams(conn, prepline, paramcount, 0, params, 0, 0, 0);
+		//PGresult *PQexecParams(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
+	}
 
 	if (!
 	    (PQresultStatus(result) == PGRES_TUPLES_OK
@@ -186,10 +238,17 @@ int replay_log(const char *file, const char *connstring)
 	    printf("command failed: %s\n", PQerrorMessage(conn));
 #endif				//DEBUG
 	}
-	PQclear(result);
+	if(result != 0)
+		PQclear(result);
+	result=0;
     }
 
+    for(i=0; i<paramcount; i++) {
+	    free(*(params+i));
+    }
 
+    free(params);
+    free(prepline);
     free(before);
     free(after);
     PQfinish(conn);

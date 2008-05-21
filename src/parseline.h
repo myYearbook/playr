@@ -22,7 +22,7 @@ typedef struct {
 
 int parse_file(char *file, char *outfile, int *count, char *format);
 
-/*@null@*/ log_elem *parseline(char *string, char *format,
-			       playr_time * ptime);
+/*@null@*/ log_elem *parseline( char *string, char *format,
+				playr_time * ptime, playr_types type);
 
 #endif				// PARSELINE_H_

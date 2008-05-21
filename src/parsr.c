@@ -69,13 +69,13 @@ int main(int argc, char **argv)
 
     // DEFAULT VALUES
     if (prefixstring == 0) {
-        length = strlen("%m [%p]: [%s %c-%l] LOG:  duration: %D ms  statement: %S");
+        length = strlen("%m [%p]: [%s %c-%l] %S");
 	prefixstring = (char *) malloc(sizeof(char) * length+1);
 	if (prefixstring == 0) {
 	    printf("%s:%d: Could not allocate memory",__FILE__,__LINE__);
 	    return -1;
 	}
-	strcpy(prefixstring, "%m [%p]: [%s %c-%l] LOG:  duration: %D ms  statement: %S");
+	strcpy(prefixstring, "%m [%p]: [%s %c-%l] %S");
     }
     if (outputfile == 0) {
 	outputfile = (char *) malloc(sizeof(char) * 9);
@@ -115,4 +115,3 @@ static void print_help(void)
 	   "  parsr -c \"%%m [%%p]\" pgsql.log  Converts pgsql.log to binary format\n");
 
 }
-

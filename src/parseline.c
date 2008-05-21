@@ -57,6 +57,11 @@ int parse_file(char *file, char *fileout, int *count, char *format)
     playr_time ptime;
     time_t utime;
     time_t earliest = 0;
+    
+    char *line_format = 0;
+    int line_format_length = 100;
+    
+    line_format = (char*)malloc(sizeof(char)*line_format_length);
 
     line = (char *) malloc(sizeof(char) * linesize);
     if (line == 0) {
@@ -111,16 +116,46 @@ int parse_file(char *file, char *fileout, int *count, char *format)
 	    printf("line: %d\n", linecount);
 	linecount++;
 
-	log = parseline(line, format, &ptime);
+	strcpy(line_format, format);
+	int line_format_length = strlen(format) - 2;
+	strcpy((line_format+line_format_length), "LOG:  duration: %D ms  statement: %S");
+	log = parseline(line, line_format, &ptime, PLAYR_NORMAL_STATEMENT);
+	
+	if(log == 0) {
+		// parse
+		strcpy(line_format, format);
+		int line_format_length = strlen(format) - 2;
+		strcpy((line_format+line_format_length), "LOG:  duration: %D ms  parse <unnamed>: %S");
+		log = parseline(line, line_format, &ptime, PLAYR_PREPARED_STATEMENT_PARSE);
+	}
+	
+	if(log == 0) {
+		// detail
+		strcpy(line_format, format);
+		int line_format_length = strlen(format) - 2;
+		strcpy((line_format+line_format_length), "DETAIL:  parameters: %S");
+		log = parseline(line, line_format, &ptime, PLAYR_PREPARED_STATEMENT_DETAIL);
+	}
+	
+	if(log == 0) {
+		// execute
+		strcpy(line_format, format);
+		int line_format_length = strlen(format) - 2;
+		strcpy((line_format+line_format_length), "LOG:  duration: %D ms  execute <unnamed>: %S");
+		log = parseline(line, line_format, &ptime, PLAYR_PREPARED_STATEMENT_EXECUTE);
+	}
+	
 
 	if (log == 0) {
-	    printf("Could not parse: %s\n\n", line);
+	    if(strstr("bind <unnamed>", line)!=0) {
+	    	printf("Could not parse: %s\n\n", line);
+	    }
 	    read = 0;
 	    continue;
 	}
 #ifdef DEBUG
-	printf("pid: %d offset: %d type: %d length: %d logitem: %s\n",
-	       log->log->pid, log->log->offset, log->log->type,
+	printf("pid: %d type: %d length: %d logitem: %s\n",
+	       log->log->pid, log->log->type,
 	       log->log->length);
 #endif				// DEBUG
 
@@ -149,6 +184,8 @@ int parse_file(char *file, char *fileout, int *count, char *format)
     fout = fopen(fileout, "a");
     fwrite(&earliest, sizeof(time_t), 1, fout);
     fclose(fout);
+    
+    free(line_format);
 
     printf("done\n");
 
@@ -159,7 +196,7 @@ int parse_file(char *file, char *fileout, int *count, char *format)
 }
 
 
-log_elem *parseline(char *string, char *format, playr_time * ptime)
+log_elem *parseline(char *string, char *format, playr_time * ptime, playr_types type)
 {
     char *stringiter = 0;
     char *formatiter = 0;
@@ -170,6 +207,10 @@ log_elem *parseline(char *string, char *format, playr_time * ptime)
     int logerror = 0;
     char *result = 0;
     char *logitem = 0;
+    char *dtoks = 0;
+    int istok = 0;
+    size_t toksize = 0;
+    size_t pos;
 
     if (ptime == 0)
 	return 0;
@@ -178,27 +219,8 @@ log_elem *parseline(char *string, char *format, playr_time * ptime)
     if (result != 0) {
 	return 0;
     }
-    result = strstr(string, "execute:");
-    if (result != 0) {
-	return 0;
-    }
-
-    result = strstr(string, "parse <unnamed>");
-    if (result != 0) {
-	return 0;
-    }
-
-    result = strstr(string, "execute <unnamed>");
-    if (result != 0) {
-	return 0;
-    }
 
     result = strstr(string, "bind <unnamed>");
-    if (result != 0) {
-	return 0;
-    }
-
-    result = strstr(string, "DETAIL:");
     if (result != 0) {
 	return 0;
     }
@@ -267,18 +289,82 @@ log_elem *parseline(char *string, char *format, playr_time * ptime)
 		}
 		stringiter = stringiter + count;
 	    } else if (*formatiter == 'S') {
-		count = strlen(stringiter) + 1;
-		logitem = (char *) malloc(sizeof(char) * count);
-		if (logitem == 0) {
-		    (":%s:%d:Could not instantiate logitem\n",__FILE__,__LINE__);
-		    logerror = 1;
-		    goto parseline_cleanup;
+		if(type == PLAYR_NORMAL_STATEMENT) {
+			count = strlen(stringiter) + 1;
+			logitem = (char *) malloc(sizeof(char) * count);
+			if (logitem == 0) {
+		    	(":%s:%d:Could not instantiate logitem\n",__FILE__,__LINE__);
+		    	logerror = 1;
+		    	goto parseline_cleanup;
+			}
+			strcpy(logitem, stringiter);
+			logitem[count - 1] = (char) 0;
+			log->log->length = count - 1;
+			log->log->type = type;
+			break;
+		} else if(type == PLAYR_PREPARED_STATEMENT_PARSE) {
+			count = strlen(stringiter) + 1;
+			logitem = (char *) malloc(sizeof(char) * count);
+			if (logitem == 0) {
+				(":%s:%d:Could not instantiate logitem\n",__FILE__,__LINE__);
+				logerror = 1;
+				goto parseline_cleanup;
+			}
+			strcpy(logitem, stringiter);
+			logitem[count - 1] = (char) 0;
+			log->log->length = count - 1;
+			log->log->type = type;
+			break;
+		} else if(type == PLAYR_PREPARED_STATEMENT_DETAIL) {
+			pos=0;
+#ifdef DEBIG
+			printf("Detail before strtok: %s\n", stringiter);
+#endif //DEBUG
+			dtoks = (char*)strtok(stringiter, "'");
+			count = strlen(stringiter) + 1;
+			logitem = (char *) malloc(sizeof(char) * count*sizeof(size_t));
+			while(dtoks != 0) {
+				if(istok) {
+					toksize = (size_t)strlen(dtoks);
+					toksize += 1;
+					memcpy(logitem+pos, &toksize, sizeof(size_t));
+					toksize -= 1;
+					pos += sizeof(size_t);
+					
+					memcpy(logitem+pos, dtoks, toksize);
+					pos += toksize;
+					logitem[pos] = 0;
+					pos++;
+#ifdef DEBUG
+					printf("detail: %d: %s\n",strlen(dtoks), dtoks);
+#endif DEBUG
+				}
+				dtoks=strtok(0, "'");
+				istok = ~istok;
+			}
+			toksize = 0;
+			memcpy(logitem+pos, &toksize, sizeof(size_t));
+			pos += sizeof(size_t);
+			log->log->type = type;
+			log->log->length = pos;
+			break;
+		} else if(type == PLAYR_PREPARED_STATEMENT_EXECUTE) {
+			count = strlen(stringiter) + 1;
+			logitem = (char *) malloc(sizeof(char) * count);
+			if (logitem == 0) {
+				(":%s:%d:Could not instantiate logitem\n",__FILE__,__LINE__);
+				logerror = 1;
+				goto parseline_cleanup;
+			}
+			strcpy(logitem, stringiter);
+			logitem[count - 1] = (char) 0;
+			log->log->length = count - 1;
+			log->log->type = type;
+			break;
+		} else {
+			logerror = 1;
+			goto parseline_cleanup;
 		}
-		strcpy(logitem, stringiter);
-		logitem[count - 1] = (char) 0;
-		log->log->length = count - 1;
-		log->log->type = PLAYR_NORMAL_STATEMENT;
-		break;
 	    }
 	    formatiter++;
 	} else if (*formatiter != *stringiter) {
@@ -647,3 +733,4 @@ static int parse_m(char *string, size_t * count, playr_time * ptime,
     free(result);
     return 0;
 }
+////	strcpy(prefixstring, "%m [%p]: [%s %c-%l] LOG:  duration: %D ms  statement: %S");
