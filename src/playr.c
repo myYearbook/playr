@@ -22,6 +22,7 @@ int main(int argc, char **argv)
 {
     char *file = 0;
     char *substr = 0;
+    char *connstring = 0;
     size_t filesize = 100;
     pid_t pid = 0;
     int ret = 0;
@@ -29,10 +30,23 @@ int main(int argc, char **argv)
     FILE *configfile = 0;
     struct dirent *nextfile = 0;
     
-    if (argc < 2 || strcmp(argv[1],"--help")==0) {
+    if (argc < 2 || argc > 4 || strcmp(argv[1],"--help")==0) {
         print_help();
 	return -1;
     }
+    
+    if(argc == 3) {
+	filesize = strlen(argv[argc-2]);
+	connstring = (char *) malloc(sizeof(char) * (filesize + 1));
+	strcpy(connstring, argv[argc-2]);
+	connstring[filesize] = '\0';
+    }
+    
+    if(connstring == 0) {
+	    connstring = (char*)malloc(sizeof(char)*1);
+	    connstring[0] = 0;
+    }
+    
 
     filesize = strlen(argv[argc-1]);
     file = (char *) malloc(sizeof(char) * (filesize + 2));
@@ -74,13 +88,14 @@ int main(int argc, char **argv)
 		// TODO: Allow configuration string to be set by user.
 		ret =
 		    replay_log(substr,
-			       "");
+			       connstring);
 		goto complete;
 	    }
 	}
 	substr = 0;
     }
 complete:
+    free(connstring);
     free(file);
     closedir(dir);
     return ret;
