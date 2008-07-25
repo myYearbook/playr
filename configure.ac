@@ -1,10 +1,12 @@
 # The libpq tests are taken from libpqxx
 
-AC_INIT([playr], [0.1], [fkautz@myyearbook.com])
+AC_INIT([playr], [0.2], [fkautz@myyearbook.com])
 AM_INIT_AUTOMAKE([-Wall])
 
 AC_PROG_CC
 AC_CONFIG_HEADERS([config.h])
+
+AC_PROG_LIBTOOL
 
 AC_PATH_PROGS(PG_CONFIG, pg_config)
 if test -z "$PG_CONFIG" || test ! -r "$PG_CONFIG"; then

@@ -1,7 +1,7 @@
 /*
 *  C Implementation: match
 *
-* Description: 
+* Description:
 *
 *
 * Author: Frederick F. Kautz IV <fkautz@myyearbook.com>, (C) 2008

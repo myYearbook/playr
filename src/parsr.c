@@ -1,7 +1,7 @@
 /*
 *  C Implementation: parsr
 *
-* Description: 
+* Description:
 *
 *
 * Author: Frederick F. Kautz IV <fkautz@myyearbook.com>, (C) 2008
@@ -69,10 +69,10 @@ int main(int argc, char **argv)
 
     // DEFAULT VALUES
     if (prefixstring == 0) {
-        length = strlen("%m [%p]: [%s %c-%l] %S");
-	prefixstring = (char *) malloc(sizeof(char) * length+1);
+	length = strlen("%m [%p]: [%s %c-%l] %S");
+	prefixstring = (char *) malloc(sizeof(char) * length + 1);
 	if (prefixstring == 0) {
-	    printf("%s:%d: Could not allocate memory",__FILE__,__LINE__);
+	    printf("%s:%d: Could not allocate memory", __FILE__, __LINE__);
 	    return -1;
 	}
 	strcpy(prefixstring, "%m [%p]: [%s %c-%l] %S");
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     if (outputfile == 0) {
 	outputfile = (char *) malloc(sizeof(char) * 9);
 	if (outputfile == 0) {
-	    printf("%s:%d: Could not allocate memory",__FILE__,__LINE__);
+	    printf("%s:%d: Could not allocate memory", __FILE__, __LINE__);
 	    return -1;
 	}
 	strcpy(outputfile, "file.out");
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     printf("output file: %s\n", outputfile);
     printf("log file: %s\n", logfile);
     parse_file(logfile, outputfile, &count, prefixstring);
-      
+
     free(prefixstring);
     return 0;
 }
