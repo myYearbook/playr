@@ -127,7 +127,8 @@ int avl_rotate(AVL_NODE* node, AVL_ROOT* tree) {
 
 	if(node == 0) {
 #ifdef DEBUG
-		printf("%s:%s:null pointer passed to avl_rotate\n",__FILE__,__LINE__);
+		printf("%s:%s:null pointer passed to 
+avl_rotate\n",__FILE__,__LINE__);
 #endif
 		return -1;
 	}
