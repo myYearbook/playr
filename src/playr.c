@@ -372,7 +372,9 @@ int replay_log ( const char *file, const char *connstring )
 		}
 		else if ( log.type == PLAYR_NAMED_STATEMENT_EXECUTE )
 		{
+#ifdef DEBUG
 			printf("named statement execute: %s\n", pname);
+#endif				// DEBUG
 			paramnode = avl_get(pname, tree);
 			params = 0;
 			paramcount = 0;
@@ -389,15 +391,17 @@ int replay_log ( const char *file, const char *connstring )
 		{
 #ifdef DEBUG
 			printf ( "command failed: %s\n", PQerrorMessage ( conn ) );
-#endif				//DEBUG
+#endif				// DEBUG
 		}
 		if ( result != 0 )
 			PQclear ( result );
 		result = 0;
 		free(pname);
 	}
-	
+
+#ifdef DEBUG	
 	printf("Freeing items\n");
+#endif				// DEBUG
 	
 	// TODO: Free tree structures and data
 	free( tree );

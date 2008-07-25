@@ -11,6 +11,7 @@
  * */
 
 
+
 #include "avltree.h"
 #include "stdlib.h"
 #include "stdio.h"
@@ -43,8 +44,9 @@ int avl_put(void* key, void* value, AVL_ROOT* tree)
 	newnode->parent = 0;
 	newnode->size = 1;
 
-
+#ifdef DEBUG
 	printf("Adding: %s\n", (char*)key);
+#endif				// DEBUG
 
 	if(tree->root == 0) {
 		tree->root = newnode;
@@ -57,13 +59,20 @@ int avl_put(void* key, void* value, AVL_ROOT* tree)
 		newnode->parent = curnode;
 		cmpresult = 0;
 		cmpresult = tree->cmp(curnode->key, newnode->key);
-		printf("traversing: %p -> %s\n", (char*)curnode, (char*)curnode->value);
+#ifdef DEBUG
+		printf("traversing: %p -> %s\n", (char*)curnode, 
+(char*)curnode->value);
+#endif				// DEBUG
 		if(cmpresult == 0) {
 			/* TODO fix memory leak:
-			Implicitly only storage curnode->value (type void *) not
-			released before assignment: curnode->value = (void *)value
-			A memory leak has been detected. Only-qualified storage is not released
-			before the last reference to it is lost. (Use -mustfreeonly to inhibit
+			Implicitly only storage curnode->value (type 
+void *) not
+			released before assignment: curnode->value = 
+(void *)value
+			A memory leak has been detected. Only-qualified 
+storage is not released
+			before the last reference to it is lost. (Use 
+-mustfreeonly to inhibit
 			warning) -- splint output
 			*/
 			if(curnode->key == curnode->value)
@@ -91,7 +100,9 @@ int avl_put(void* key, void* value, AVL_ROOT* tree)
 
 
 	while(curnode != 0) {
+#ifdef DEBUG
 		printf("checking %s\n", curnode->key);
+#endif				// DEBUG
 		avl_setheight(curnode);
 		avl_rotate(curnode, tree);
 		avl_setheight(curnode);
@@ -116,7 +127,8 @@ int avl_rotate(AVL_NODE* node, AVL_ROOT* tree) {
 
 	if(node == 0) {
 #ifdef DEBUG
-		printf("%s:%s:null pointer passed to avl_rotate\n",__FILE__,__LINE__);
+		printf("%s:%s:null pointer passed to 
+avl_rotate\n",__FILE__,__LINE__);
 #endif
 		return -1;
 	}
@@ -124,23 +136,36 @@ int avl_rotate(AVL_NODE* node, AVL_ROOT* tree) {
 
 
 	balance = avl_getbalance(node);
-
+#ifdef DEBUG
 	printf("balance: %d\n", balance);
+#endif				// DEBUG
 
 	if(balance == -2) {
 		if(avl_getbalance(node->right)==-1) {
-			printf("Calling avl_rr on %s\n", (char*)node->key);
+#ifdef DEBUG
+			printf("Calling avl_rr on %s\n", 
+(char*)node->key);
+#endif				// DEBUG
 			avl_rr(node, tree);
 		} else {
-			printf("Calling avl_rl on %s\n", (char*)node->key);
+#ifdef DEBUG
+			printf("Calling avl_rl on %s\n", 
+(char*)node->key);
+#endif				// DEBUG
 			avl_rl(node, tree);
 		}
 	} else if(balance == 2) {
 		if(avl_getbalance(node->left)==1) {
-			printf("Calling avl_ll on %s\n", (char*)node->key);
+#ifdef DEBUG
+			printf("Calling avl_ll on %s\n", 
+(char*)node->key);
+#endif				// DEBUG
 			avl_ll(node, tree);
 		} else {
-			printf("Calling avl_lr on %s\n", (char*)node->key);
+#ifdef DEBUG
+			printf("Calling avl_lr on %s\n", 
+(char*)node->key);
+#endif				// DEBUG
 			avl_lr(node, tree);
 		}
 	}
@@ -162,7 +187,8 @@ void avl_setheight(AVL_NODE* node) {
 int avl_getbalance(AVL_NODE* node) {
 	if(node == 0)
 		return 0;
-	return avl_getheight((AVL_NODE*)(node->left)) - avl_getheight((AVL_NODE*)(node->right));
+	return avl_getheight((AVL_NODE*)(node->left)) - 
+avl_getheight((AVL_NODE*)(node->right));
 }
 
 int avl_getheight(AVL_NODE* node) {
@@ -176,16 +202,19 @@ void avl_rr(AVL_NODE* node, AVL_ROOT* tree)
 {
 	AVL_NODE* parent = 0;
 	AVL_NODE* tmp = 0;
-	if(node == 0 ||  node->right == 0 || ((AVL_NODE*)node->right)->right == 0) {
+	if(node == 0 ||  node->right == 0 || 
+((AVL_NODE*)node->right)->right == 0) {
 #ifdef DEBUG
-		printf("%s:%s: Tree is in a bad state\n", __FILE__,__LINE__);
+		printf("%s:%s: Tree is in a bad state\n", 
+__FILE__,__LINE__);
 #endif
 		return;
 	}
 	parent = node->parent;
 	tmp = node->right;
-
+#ifdef DEBUG
 	printf("parent: %p tmp: %p\n", parent, tmp);
+#endif				// DEBUG
 
 
 	node->right = tmp->left;
@@ -210,12 +239,14 @@ void avl_rr(AVL_NODE* node, AVL_ROOT* tree)
 
 	avl_setheight(node);
 	avl_setheight(tmp);
-
+#ifdef DEBUG
 	printf("final(%s): %p %p\n", tmp->key, tmp->left, tmp->right);
+#endif				// DEBUG
 }
 void avl_rl(AVL_NODE* node, AVL_ROOT* tree)
 {
-	if(node == 0 ||  node->right == 0 || ((AVL_NODE*)node->right)->left == 0) {
+	if(node == 0 ||  node->right == 0 || 
+((AVL_NODE*)node->right)->left == 0) {
 		return;
 	}
 	avl_ll(node->right, tree);
@@ -227,14 +258,16 @@ void avl_ll(AVL_NODE* node, AVL_ROOT* tree)
 	AVL_NODE* tmp = 0;
 	if(node == 0 ||  node->left == 0) {
 #ifdef DEBUG
-		printf("%s:%s: Tree is in a bad state\n", __FILE__,__LINE__);
+		printf("%s:%s: Tree is in a bad state\n", 
+__FILE__,__LINE__);
 #endif
 		return;
 	}
 	parent = node->parent;
 	tmp = node->left;
-
+#ifdef DEBUG
 	printf("parent: %p tmp: %p\n", parent, tmp);
+#endif				// DEBUG
 
 
 	node->left = tmp->right;
@@ -259,13 +292,15 @@ void avl_ll(AVL_NODE* node, AVL_ROOT* tree)
 
 	avl_setheight(node);
 	avl_setheight(tmp);
-
+#ifdef DEBUG
 	printf("final(%s): %p %p\n", tmp->key, tmp->left, tmp->right);
+#endif				// DEBUG
 }
 
 void avl_lr(AVL_NODE* node, AVL_ROOT* tree)
 {
-	if(node == 0 ||  node->left == 0 || ((AVL_NODE*)node->left)->left == 0) {
+	if(node == 0 ||  node->left == 0 || 
+((AVL_NODE*)node->left)->left == 0) {
 		return;
 	}
 	avl_rr(node->left, tree);
